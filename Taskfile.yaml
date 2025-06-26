@@ -1,0 +1,404 @@
+version: "3"
+
+includes:
+  frontend:
+    taskfile: ./frontend/Taskfile.yaml
+    dir: ./frontend
+  catalogue:
+    taskfile: ./catalogue/Taskfile.yaml
+    dir: ./catalogue
+  voting:
+    taskfile: ./voting/Taskfile.yaml
+    dir: ./voting
+  recommendation:
+    taskfile: ./recommendation/Taskfile.yaml
+    dir: ./recommendation
+
+vars:
+  SERVICES: frontend catalogue voting recommendation
+  REGISTRY: '{{.REGISTRY | default "ghcr.io"}}'
+  REPO: '{{.GITHUB_REPOSITORY | default "craftista/craftista"}}'
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  install:
+    desc: Install dependencies for all services
+    cmds:
+      - task: frontend:install
+      - task: catalogue:install
+      - task: voting:install
+      - task: recommendation:install
+
+  test:
+    desc: Run tests for all services
+    cmds:
+      - task: frontend:test
+      - task: catalogue:test
+      - task: voting:test
+      - task: recommendation:test
+
+  test:parallel:
+    desc: Run tests for all services in parallel
+    deps:
+      - frontend:test
+      - catalogue:test
+      - voting:test
+      - recommendation:test
+
+  build:
+    desc: Build all services
+    cmds:
+      - task: frontend:build
+      - task: catalogue:build
+      - task: voting:build
+      - task: recommendation:build
+
+  docker:build:
+    desc: Build Docker images for all services
+    cmds:
+      - task: frontend:docker:build
+      - task: catalogue:docker:build
+      - task: voting:docker:build
+      - task: recommendation:docker:build
+
+  docker:build:parallel:
+    desc: Build Docker images for all services in parallel
+    deps:
+      - frontend:docker:build
+      - catalogue:docker:build
+      - voting:docker:build
+      - recommendation:docker:build
+
+  docker:push:
+    desc: Push all Docker images to registry
+    cmds:
+      - task: frontend:docker:push
+      - task: catalogue:docker:push
+      - task: voting:docker:push
+      - task: recommendation:docker:push
+
+  docker:login:
+    desc: Login to GitHub Container Registry
+    vars:
+      GITHUB_USERNAME: '{{.GITHUB_USERNAME | default "YOUR_GITHUB_USERNAME"}}'
+    cmds:
+      - |
+        if [ -z "$CR_PAT" ]; then
+          echo "❌ Error: CR_PAT environment variable is not set"
+          echo ""
+          echo "To login to GitHub Container Registry:"
+          echo "1. Create a Personal Access Token at: https://github.com/settings/tokens/new"
+          echo "   Required scopes: read:packages, write:packages, delete:packages"
+          echo ""
+          echo "2. Export the token:"
+          echo "   export CR_PAT=your_github_personal_access_token"
+          echo ""
+          echo "3. Run this command again or use:"
+          echo "   echo \$CR_PAT | docker login ghcr.io -u {{.GITHUB_USERNAME}} --password-stdin"
+          exit 1
+        fi
+        echo "Logging in to GitHub Container Registry as {{.GITHUB_USERNAME}}..."
+        echo $CR_PAT | docker login ghcr.io -u {{.GITHUB_USERNAME}} --password-stdin
+
+  docker:compose:up:
+    desc: Start all services with docker compose
+    cmds:
+      - docker compose up -d
+
+  docker:compose:down:
+    desc: Stop all services with docker compose
+    cmds:
+      - docker compose down
+
+  docker:compose:logs:
+    desc: Show logs from all services
+    cmds:
+      - docker compose logs -f
+
+  docker:run:registry:
+    desc: Run all services using images from GitHub Container Registry
+    cmds:
+      - |
+        echo "Checking GitHub Container Registry authentication..."
+        if ! docker pull ghcr.io/nerds-run/craftista/craftista-frontend:main > /dev/null 2>&1; then
+          echo ""
+          echo "⚠️  Unable to pull images from ghcr.io"
+          echo ""
+          echo "This could mean:"
+          echo "1. The images haven't been pushed yet (run GitHub Actions workflows first)"
+          echo "2. The images are private and you need to authenticate"
+          echo ""
+          echo "To authenticate with GitHub Container Registry:"
+          echo "  export CR_PAT=your_github_personal_access_token"
+          echo "  echo \$CR_PAT | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin"
+          echo ""
+          echo "Alternatively, use locally built images:"
+          echo "  task docker:run:local"
+          exit 1
+        fi
+        echo "✅ Authentication successful"
+        echo ""
+        echo "Pulling latest images from ghcr.io/nerds-run/craftista..."
+        docker compose pull
+        docker compose up -d
+        echo ""
+        echo "Services are starting up..."
+        echo "Frontend: http://localhost:3030"
+        echo "Catalogue API: http://localhost:5000"
+        echo "Voting API: http://localhost:8080"
+        echo "Recommendation API: http://localhost:8081"
+        echo ""
+        echo "Run 'task docker:compose:logs' to see logs"
+
+  docker:run:local:
+    desc: Run all services using locally built images
+    deps:
+      - docker:build:parallel
+    cmds:
+      - |
+        # Create temporary docker-compose override for local images
+        cat > docker-compose.override.yml << EOF
+        version: '3.8'
+        services:
+          frontend:
+            image: craftista-frontend:latest
+          catalogue:
+            image: craftista-catalogue:latest
+          voting:
+            image: craftista-voting:latest
+          recommendation:
+            image: craftista-recommendation:latest
+        EOF
+        docker compose up -d
+        echo ""
+        echo "Services are starting up with local images..."
+        echo "Frontend: http://localhost:3030"
+        echo "Catalogue API: http://localhost:5000"
+        echo "Voting API: http://localhost:8080"
+        echo "Recommendation API: http://localhost:8081"
+        echo ""
+        echo "Run 'task docker:compose:logs' to see logs"
+
+  lint:
+    desc: Run linting for all services
+    cmds:
+      - task: frontend:lint
+      - task: catalogue:lint
+      - task: voting:lint
+      - task: recommendation:lint
+
+  clean:
+    desc: Clean build artifacts for all services
+    cmds:
+      - task: frontend:clean
+      - task: catalogue:clean
+      - task: voting:clean
+      - task: recommendation:clean
+
+  act:install:
+    desc: Install act for local GitHub Actions testing
+    cmds:
+      - |
+        if ! command -v act &> /dev/null; then
+          echo "Installing act..."
+          curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
+        else
+          echo "act is already installed"
+        fi
+
+  act:test:
+    desc: Test all GitHub Actions workflows locally with act
+    deps: [act:install]
+    cmds:
+      - |
+        echo "Testing all workflows with 'push' event..."
+        act push --list
+        echo ""
+        echo "Running all workflows..."
+        act push --container-architecture linux/amd64 --rm
+
+  act:run:
+    desc: Run GitHub Actions workflow locally
+    deps: [act:install]
+    vars:
+      EVENT: '{{.CLI_ARGS | default "push"}}'
+    cmds:
+      - act {{.EVENT}} --container-architecture linux/amd64
+
+  act:frontend:
+    desc: Test frontend workflow locally
+    deps: [act:install]
+    cmds:
+      - act push -W .github/workflows/frontend.yml --container-architecture linux/amd64
+
+  act:catalogue:
+    desc: Test catalogue workflow locally
+    deps: [act:install]
+    cmds:
+      - act push -W .github/workflows/catalogue.yml --container-architecture linux/amd64
+
+  act:voting:
+    desc: Test voting workflow locally
+    deps: [act:install]
+    cmds:
+      - act push -W .github/workflows/voting.yml --container-architecture linux/amd64
+
+  act:recommendation:
+    desc: Test recommendation workflow locally
+    deps: [act:install]
+    cmds:
+      - act push -W .github/workflows/recommendation.yml --container-architecture linux/amd64
+
+  act:build:all:
+    desc: Build and push all Docker images using act
+    deps: [act:install]
+    cmds:
+      - |
+        echo "Building and pushing all services to GitHub Container Registry..."
+        echo "This will run the build-and-push jobs for each service."
+        echo ""
+        echo "Building Frontend..."
+        act push --job build-and-push -W .github/workflows/frontend.yml
+        echo ""
+        echo "Building Catalogue..."
+        act push --job build-and-push -W .github/workflows/catalogue.yml
+        echo ""
+        echo "Building Voting..."
+        act push --job build-and-push -W .github/workflows/voting.yml
+        echo ""
+        echo "Building Recommendation..."
+        act push --job build-and-push -W .github/workflows/recommendation.yml
+        echo ""
+        echo "All services have been built and pushed!"
+        echo "You can now run: task docker:run:registry"
+
+  act:help:
+    desc: Show all available act tasks and usage examples
+    cmds:
+      - |
+        echo "🎭 Act Tasks - Local GitHub Actions Testing"
+        echo "=========================================="
+        echo ""
+        echo "Available tasks:"
+        echo "  task act:install       - Install act CLI tool"
+        echo "  task act:test          - Run all workflows with push event"
+        echo "  task act:build:all     - Build and push all Docker images"
+        echo "  task act:run -- <event> - Run workflows for specific event (push, pull_request, etc.)"
+        echo "  task act:frontend      - Test frontend workflow only"
+        echo "  task act:catalogue     - Test catalogue workflow only"
+        echo "  task act:voting        - Test voting workflow only"
+        echo "  task act:recommendation - Test recommendation workflow only"
+        echo "  task act:help          - Show this help message"
+        echo ""
+        echo "Configuration files:"
+        echo "  .actrc     - Act configuration (runner images, architecture)"
+        echo "  .env.act   - Environment variables for workflows"
+        echo "  .secrets   - Secret values (create from .secrets template)"
+        echo ""
+        echo "Examples:"
+        echo "  # Test all workflows"
+        echo "  task act:test"
+        echo ""
+        echo "  # Test specific workflow"
+        echo "  task act:frontend"
+        echo ""
+        echo "  # Run with pull_request event"
+        echo "  task act:run -- pull_request"
+        echo ""
+        echo "  # List workflows without running"
+        echo "  act -l"
+        echo ""
+        echo "  # Run with specific event and workflow"
+        echo "  act push -W .github/workflows/frontend.yml"
+        echo ""
+        echo "Note: Make sure to create .secrets file with your GitHub token"
+        echo "      for registry authentication (see .secrets template)"
+
+  ci:setup:
+    desc: Setup CI/CD prerequisites
+    cmds:
+      - mkdir -p .github/workflows
+      - echo "GitHub Actions workflows directory created"
+
+  dev:all:
+    desc: Run all services in development mode (requires multiple terminals)
+    cmds:
+      - |
+        echo "Starting all services in development mode..."
+        echo "Run these commands in separate terminals:"
+        echo "  task frontend:dev"
+        echo "  task catalogue:dev"
+        echo "  task voting:dev"
+        echo "  task recommendation:dev"
+
+  help:
+    desc: Show comprehensive help for all available tasks
+    cmds:
+      - |
+        echo "🚀 Craftista Task Runner Help"
+        echo "============================="
+        echo ""
+        echo "This project uses Taskfile (https://taskfile.dev) for task automation."
+        echo ""
+        echo "📋 QUICK START"
+        echo "--------------"
+        echo "  export CR_PAT=your_token  # Set GitHub Personal Access Token"
+        echo "  task docker:login         # Login to GitHub Container Registry"
+        echo "  task docker:run:registry  # Run services from registry"
+        echo ""
+        echo "  OR for local development:"
+        echo "  task install              # Install dependencies"
+        echo "  task docker:run:local     # Build and run locally"
+        echo ""
+        echo "🔧 DEVELOPMENT"
+        echo "--------------"
+        echo "  task frontend:dev         # Run frontend in dev mode (port 3030)"
+        echo "  task catalogue:dev        # Run catalogue in dev mode (port 5000)"
+        echo "  task voting:dev           # Run voting in dev mode (port 8080)"
+        echo "  task recommendation:dev   # Run recommendation in dev mode (port 8081)"
+        echo ""
+        echo "🧪 TESTING"
+        echo "----------"
+        echo "  task test                 # Run tests for all services"
+        echo "  task test:parallel        # Run tests in parallel"
+        echo "  task frontend:test        # Run frontend tests only"
+        echo ""
+        echo "🐳 DOCKER"
+        echo "---------"
+        echo "  task docker:build         # Build all Docker images"
+        echo "  task docker:build:parallel # Build images in parallel"
+        echo "  task docker:push          # Push images to registry"
+        echo "  task docker:compose:up    # Start services with docker-compose"
+        echo "  task docker:compose:down  # Stop services"
+        echo "  task docker:compose:logs  # View service logs"
+        echo ""
+        echo "🎭 CI/CD TESTING (Act)"
+        echo "--------------------"
+        echo "  task act:help             # Show act tasks help"
+        echo "  task act:test             # Test all workflows locally"
+        echo "  task act:frontend         # Test frontend workflow"
+        echo ""
+        echo "🛠️  UTILITIES"
+        echo "------------"
+        echo "  task lint                 # Run linters for all services"
+        echo "  task clean                # Clean all build artifacts"
+        echo "  task --list               # Show all available tasks"
+        echo "  task --list-all           # Show tasks from all Taskfiles"
+        echo ""
+        echo "📦 SERVICE-SPECIFIC TASKS"
+        echo "------------------------"
+        echo "Each service has its own tasks. Examples:"
+        echo "  task frontend:install     # Install frontend dependencies"
+        echo "  task catalogue:lint       # Lint Python code"
+        echo "  task voting:build         # Build Java application"
+        echo "  task recommendation:test  # Run Go tests"
+        echo ""
+        echo "For service-specific help, run:"
+        echo "  task frontend:default"
+        echo "  task catalogue:default"
+        echo "  task voting:default"
+        echo "  task recommendation:default"
