@@ -4,9 +4,10 @@ const os = require("os");
 const fs = require("fs");
 const config = require("./config.json"); // Import configuration
 const app = express();
-const productsApiBaseUri = config.productsApiBaseUri;
-const recommendationBaseUri = config.recommendationBaseUri;
-const votingBaseUri = config.votingBaseUri;
+// Use environment variables if available, fallback to config.json
+const productsApiBaseUri = process.env.productsApiBaseUri || config.productsApiBaseUri;
+const recommendationBaseUri = process.env.recommendationBaseUri || config.recommendationBaseUri;
+const votingBaseUri = process.env.votingBaseUri || config.votingBaseUri;
 const origamisRouter = require("./routes/origamis");
 
 app.set("view engine", "ejs");
@@ -39,7 +40,7 @@ app.get("/", (req, res) => {
 
   res.render("index", {
     systemInfo: systemInfo,
-    app_version: config.version, // provide version to the view
+    app_version: process.env.version || config.version, // provide version to the view
   });
 });
 
