@@ -1,0 +1,93 @@
+version: '3'
+
+vars:
+  SERVICE: recommendation
+  IMAGE: craftista-recommendation
+  PORT: 8081
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  install:
+    desc: Download dependencies
+    cmds:
+      - go mod download
+      - go mod tidy
+    sources:
+      - go.mod
+      - go.sum
+
+  dev:
+    desc: Run in development mode with hot reload
+    deps: [install]
+    cmds:
+      - go run main.go
+    env:
+      GIN_MODE: debug
+
+  test:
+    desc: Run tests
+    deps: [install]
+    cmds:
+      - go test -v ./tests/...
+    sources:
+      - '**/*.go'
+      - go.mod
+
+  build:
+    desc: Build the application
+    deps: [install]
+    cmds:
+      - go build -o bin/recommendation main.go
+    sources:
+      - '**/*.go'
+      - go.mod
+    generates:
+      - bin/recommendation
+
+  lint:
+    desc: Run golangci-lint
+    deps: [install]
+    cmds:
+      - golangci-lint run || go fmt ./...
+
+  format:
+    desc: Format code
+    cmds:
+      - go fmt ./...
+      - go mod tidy
+
+  docker:build:
+    desc: Build Docker image
+    cmds:
+      - docker build -t {{.IMAGE}}:{{.TAG | default "latest"}} .
+    sources:
+      - Dockerfile
+      - go.mod
+      - go.sum
+      - '**/*.go'
+
+  docker:run:
+    desc: Run Docker container
+    deps: [docker:build]
+    cmds:
+      - docker run -p {{.PORT}}:{{.PORT}} --rm {{.IMAGE}}:{{.TAG | default "latest"}}
+
+  docker:push:
+    desc: Push Docker image to registry
+    vars:
+      REGISTRY: '{{.REGISTRY | default "ghcr.io"}}'
+      REPO: '{{.GITHUB_REPOSITORY | default "craftista/craftista"}}'
+    cmds:
+      - docker tag {{.IMAGE}}:{{.TAG | default "latest"}} {{.REGISTRY}}/{{.REPO}}/{{.IMAGE}}:{{.TAG | default "latest"}}
+      - docker push {{.REGISTRY}}/{{.REPO}}/{{.IMAGE}}:{{.TAG | default "latest"}}
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf bin/
+      - go clean -cache
+      - go clean -modcache

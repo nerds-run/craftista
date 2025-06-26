@@ -1,0 +1,28 @@
+# Act configuration for local GitHub Actions testing
+# https://github.com/nektos/act
+
+# Default image for runners
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+-P ubuntu-22.04=catthehacker/ubuntu:act-22.04
+-P ubuntu-20.04=catthehacker/ubuntu:act-20.04
+
+# Use Docker to pull images
+--pull=true
+
+# Container architecture
+--container-architecture linux/amd64
+
+# Reuse containers to speed up subsequent runs
+--reuse
+
+# Set workspace
+--actor craftista-developer
+
+# Default secrets (override with .secrets file)
+--secret-file .secrets
+
+# Environment variables
+--env-file .env.act
+
+# Artifact server (optional, for testing artifact upload/download)
+# --artifact-server-path /tmp/artifacts

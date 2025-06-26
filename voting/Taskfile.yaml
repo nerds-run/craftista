@@ -1,0 +1,84 @@
+version: '3'
+
+vars:
+  SERVICE: voting
+  IMAGE: craftista-voting
+  PORT: 8080
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  install:
+    desc: Install dependencies
+    cmds:
+      - mvn dependency:resolve
+    sources:
+      - pom.xml
+
+  dev:
+    desc: Run in development mode
+    deps: [install]
+    cmds:
+      - mvn spring-boot:run
+    env:
+      SPRING_PROFILES_ACTIVE: dev
+
+  test:
+    desc: Run tests
+    deps: [install]
+    cmds:
+      - mvn test
+    sources:
+      - src/**/*.java
+      - pom.xml
+
+  build:
+    desc: Build the application
+    deps: [install]
+    cmds:
+      - mvn clean package
+    sources:
+      - src/**/*.java
+      - pom.xml
+    generates:
+      - target/*.jar
+
+  lint:
+    desc: Run checkstyle
+    deps: [install]
+    cmds:
+      - mvn checkstyle:check || true
+
+  docker:build:
+    desc: Build Docker image
+    deps: [build]
+    cmds:
+      - docker build -t {{.IMAGE}}:{{.TAG | default "latest"}} .
+    sources:
+      - Dockerfile
+      - target/*.jar
+      - pom.xml
+
+  docker:run:
+    desc: Run Docker container
+    deps: [docker:build]
+    cmds:
+      - docker run -p {{.PORT}}:{{.PORT}} --rm {{.IMAGE}}:{{.TAG | default "latest"}}
+
+  docker:push:
+    desc: Push Docker image to registry
+    vars:
+      REGISTRY: '{{.REGISTRY | default "ghcr.io"}}'
+      REPO: '{{.GITHUB_REPOSITORY | default "craftista/craftista"}}'
+    cmds:
+      - docker tag {{.IMAGE}}:{{.TAG | default "latest"}} {{.REGISTRY}}/{{.REPO}}/{{.IMAGE}}:{{.TAG | default "latest"}}
+      - docker push {{.REGISTRY}}/{{.REPO}}/{{.IMAGE}}:{{.TAG | default "latest"}}
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - mvn clean
+      - rm -rf target

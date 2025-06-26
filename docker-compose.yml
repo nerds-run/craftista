@@ -1,0 +1,56 @@
+services:
+  frontend:
+    image: ghcr.io/nerds-run/craftista/craftista-frontend:main
+    ports:
+      - "3030:3030"
+    environment:
+      - NODE_ENV=production
+      - CATALOGUE_URL=http://catalogue:5000
+      - VOTING_URL=http://voting:8080
+      - RECOMMENDATION_URL=http://recommendation:8081
+    depends_on:
+      - catalogue
+      - voting
+      - recommendation
+    networks:
+      - craftista-network
+
+  catalogue:
+    image: ghcr.io/nerds-run/craftista/craftista-catalogue:main
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+    networks:
+      - craftista-network
+
+  catalogue-db:
+    image: postgres:16.2-alpine3.19
+    environment:
+      POSTGRES_USER: devops
+      POSTGRES_PASSWORD: devops
+      POSTGRES_DB: catalogue
+    networks:
+      - craftista-network
+
+  voting:
+    image: ghcr.io/nerds-run/craftista/craftista-voting:main
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    networks:
+      - craftista-network
+
+  recommendation:
+    image: ghcr.io/nerds-run/craftista/craftista-recommendation:main
+    ports:
+      - "8081:8080"
+    environment:
+      - GIN_MODE=release
+    networks:
+      - craftista-network
+
+networks:
+  craftista-network:
+    driver: bridge

@@ -1,0 +1,93 @@
+version: '3'
+
+vars:
+  SERVICE: catalogue
+  IMAGE: craftista-catalogue
+  PORT: 5000
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  install:
+    desc: Install dependencies
+    cmds:
+      - pip install -r requirements.txt
+    sources:
+      - requirements.txt
+
+  dev:
+    desc: Run in development mode
+    deps: [install]
+    cmds:
+      - python app.py
+    env:
+      FLASK_ENV: development
+      FLASK_DEBUG: 1
+
+  test:
+    desc: Run tests
+    deps: [install]
+    cmds:
+      - python -m pytest test_app.py -v || python test_app.py
+    sources:
+      - test_app.py
+      - app.py
+      - '*.py'
+
+  lint:
+    desc: Run linting with flake8
+    deps: [install]
+    cmds:
+      - pip install flake8 --quiet
+      - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
+      - flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics || true
+
+  format:
+    desc: Format code with black
+    cmds:
+      - pip install black --quiet
+      - black .
+
+  build:
+    desc: Build the application
+    deps: [install]
+    cmds:
+      - echo "Python is interpreted, no build step required"
+
+  docker:build:
+    desc: Build Docker image
+    cmds:
+      - docker build -t {{.IMAGE}}:{{.TAG | default "latest"}} .
+    sources:
+      - Dockerfile
+      - requirements.txt
+      - '*.py'
+      - static/**/*
+      - templates/**/*
+
+  docker:run:
+    desc: Run Docker container
+    deps: [docker:build]
+    cmds:
+      - docker run -p {{.PORT}}:{{.PORT}} --rm {{.IMAGE}}:{{.TAG | default "latest"}}
+
+  docker:push:
+    desc: Push Docker image to registry
+    vars:
+      REGISTRY: '{{.REGISTRY | default "ghcr.io"}}'
+      REPO: '{{.GITHUB_REPOSITORY | default "craftista/craftista"}}'
+    cmds:
+      - docker tag {{.IMAGE}}:{{.TAG | default "latest"}} {{.REGISTRY}}/{{.REPO}}/{{.IMAGE}}:{{.TAG | default "latest"}}
+      - docker push {{.REGISTRY}}/{{.REPO}}/{{.IMAGE}}:{{.TAG | default "latest"}}
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - find . -type f -name '*.pyc' -delete
+      - find . -type d -name '__pycache__' -delete
+      - rm -rf .pytest_cache
+      - rm -rf .coverage
+      - rm -rf htmlcov
