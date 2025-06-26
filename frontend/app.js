@@ -88,7 +88,7 @@ app.get("/api/service-status", async (req, res) => {
 
 app.get("/recommendation-status", (req, res) => {
   axios
-    .get(config.recommendationBaseUri + "/api/recommendation-status")
+    .get(recommendationBaseUri + "/api/recommendation-status")
     .then((response) => {
       res.json({ status: "up", message: "Recommendation Service is Online" });
     })
@@ -102,7 +102,7 @@ app.get("/recommendation-status", (req, res) => {
 
 app.get("/votingservice-status", (req, res) => {
   axios
-    .get(config.votingBaseUri + "/api/origamis")
+    .get(votingBaseUri + "/api/origamis")
     .then((response) => {
       res.json({ status: "up", message: "Voting Service is Online" });
     })
@@ -113,11 +113,12 @@ app.get("/votingservice-status", (req, res) => {
 
 app.get("/daily-origami", (req, res) => {
   axios
-    .get(config.recommendationBaseUri + "/api/origami-of-the-day")
+    .get(recommendationBaseUri + "/api/origami-of-the-day")
     .then((response) => {
       res.json(response.data);
     })
     .catch((error) => {
+      console.error("Error fetching daily origami:", error);
       res.status(500).send("Error while fetching daily origami");
     });
 });
