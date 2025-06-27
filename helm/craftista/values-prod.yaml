@@ -1,0 +1,117 @@
+# Production environment overrides
+
+global:
+  imageRegistry: ghcr.io/nerds-run/craftista
+
+frontend:
+  replicaCount: 2
+  image:
+    tag: main
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    hosts:
+      - host: craftista.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: craftista-tls
+        hosts:
+          - craftista.example.com
+  resources:
+    limits:
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+catalogue:
+  replicaCount: 2
+  image:
+    tag: main
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+voting:
+  replicaCount: 2
+  image:
+    tag: main
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+recommendation:
+  replicaCount: 3
+  image:
+    tag: main
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 60
+
+# PostgreSQL for production
+postgresql:
+  enabled: true
+  primary:
+    persistence:
+      enabled: false  # No persistent storage
+    resources:
+      limits:
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+
+# Enable monitoring
+serviceMonitor:
+  enabled: true
+  interval: 15s
+
+# Enable pod disruption budgets
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Enable network policies
+networkPolicy:
+  enabled: true

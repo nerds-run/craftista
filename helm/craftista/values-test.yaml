@@ -1,0 +1,93 @@
+# Test environment overrides
+
+global:
+  imageRegistry: ghcr.io/nerds-run/craftista
+
+frontend:
+  replicaCount: 1
+  image:
+    tag: main
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: false
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  autoscaling:
+    enabled: false
+
+catalogue:
+  replicaCount: 1
+  image:
+    tag: main
+    pullPolicy: Always
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  autoscaling:
+    enabled: false
+
+voting:
+  replicaCount: 1
+  image:
+    tag: main
+    pullPolicy: Always
+  resources:
+    limits:
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+  autoscaling:
+    enabled: false
+
+recommendation:
+  replicaCount: 1
+  image:
+    tag: main
+    pullPolicy: Always
+  resources:
+    limits:
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+
+# PostgreSQL for test
+postgresql:
+  enabled: true
+  primary:
+    persistence:
+      enabled: false  # No persistent storage
+    resources:
+      limits:
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+
+# Monitoring disabled for test
+serviceMonitor:
+  enabled: false
+
+# Pod disruption budgets disabled for test
+podDisruptionBudget:
+  enabled: false
+
+# Network policies disabled for test
+networkPolicy:
+  enabled: false
+
+# ServiceAccount enabled for test
+serviceAccount:
+  create: true

@@ -19,6 +19,14 @@ WORKDIR /app
 # Copy the JAR file built in the previous stage
 COPY --from=build /app/target/voting-0.0.1-SNAPSHOT.jar app.jar
 
+# Create non-root user
+RUN groupadd -g 1001 appgroup && \
+    useradd -u 1001 -g appgroup appuser && \
+    chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
+
 # Expose port 8080 for the Spring Boot application
 EXPOSE 8080
 

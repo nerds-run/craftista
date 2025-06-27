@@ -1,0 +1,21 @@
+apiVersion: v2
+name: craftista
+description: A polyglot microservices application for learning DevOps
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+keywords:
+  - craftista
+  - microservices
+  - devops
+  - learning
+
+maintainers:
+  - name: Nerds Run
+    url: https://github.com/nerds-run/craftista
+
+sources:
+  - https://github.com/nerds-run/craftista
+
+dependencies: []

@@ -1,0 +1,1 @@
+{{- include "craftista.service" (dict "service" "recommendation" "port" 8080 "context" $) -}}

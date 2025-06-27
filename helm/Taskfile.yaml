@@ -1,0 +1,310 @@
+version: "3"
+
+vars:
+  CHART_PATH: ./craftista
+  RELEASE_NAME: '{{.RELEASE_NAME | default "craftista"}}'
+  NAMESPACE: '{{.NAMESPACE | default "default"}}'
+
+tasks:
+  default:
+    desc: Show available Helm tasks
+    cmds:
+      - task --list
+
+  install:
+    desc: Install Craftista using Helm
+    vars:
+      VALUES_FILE: '{{.VALUES_FILE | default ""}}'
+    cmds:
+      - |
+        echo "Installing Craftista with Helm..."
+        echo "Release: {{.RELEASE_NAME}}"
+        echo "Namespace: {{.NAMESPACE}}"
+        {{- if .VALUES_FILE }}
+        echo "Values: {{.VALUES_FILE}}"
+        helm install {{.RELEASE_NAME}} {{.CHART_PATH}} \
+          --namespace {{.NAMESPACE}} \
+          --create-namespace \
+          -f {{.VALUES_FILE}}
+        {{- else }}
+        helm install {{.RELEASE_NAME}} {{.CHART_PATH}} \
+          --namespace {{.NAMESPACE}} \
+          --create-namespace
+        {{- end }}
+
+  upgrade:
+    desc: Upgrade Craftista Helm release
+    vars:
+      VALUES_FILE: '{{.VALUES_FILE | default ""}}'
+    cmds:
+      - |
+        echo "Upgrading Craftista release..."
+        {{- if .VALUES_FILE }}
+        helm upgrade {{.RELEASE_NAME}} {{.CHART_PATH}} \
+          --namespace {{.NAMESPACE}} \
+          -f {{.VALUES_FILE}}
+        {{- else }}
+        helm upgrade {{.RELEASE_NAME}} {{.CHART_PATH}} \
+          --namespace {{.NAMESPACE}}
+        {{- end }}
+
+  install:dev:
+    desc: Install Craftista in development mode
+    cmds:
+      - task: install
+        vars:
+          RELEASE_NAME: craftista-dev
+          NAMESPACE: craftista-dev
+          VALUES_FILE: "{{.CHART_PATH}}/values-dev.yaml"
+
+  install:test:
+    desc: Install Craftista in test mode
+    cmds:
+      - task: install
+        vars:
+          RELEASE_NAME: craftista-test
+          NAMESPACE: craftista-test
+          VALUES_FILE: "{{.CHART_PATH}}/values-test.yaml"
+
+  install:prod:
+    desc: Install Craftista in production mode
+    cmds:
+      - task: install
+        vars:
+          RELEASE_NAME: craftista-prod
+          NAMESPACE: craftista-prod
+          VALUES_FILE: "{{.CHART_PATH}}/values-prod.yaml"
+
+  upgrade:dev:
+    desc: Upgrade Craftista in development mode
+    cmds:
+      - task: upgrade
+        vars:
+          RELEASE_NAME: craftista-dev
+          NAMESPACE: craftista-dev
+          VALUES_FILE: "{{.CHART_PATH}}/values-dev.yaml"
+
+  upgrade:test:
+    desc: Upgrade Craftista in test mode
+    cmds:
+      - task: upgrade
+        vars:
+          RELEASE_NAME: craftista-test
+          NAMESPACE: craftista-test
+          VALUES_FILE: "{{.CHART_PATH}}/values-test.yaml"
+
+  upgrade:prod:
+    desc: Upgrade Craftista in production mode
+    cmds:
+      - task: upgrade
+        vars:
+          RELEASE_NAME: craftista-prod
+          NAMESPACE: craftista-prod
+          VALUES_FILE: "{{.CHART_PATH}}/values-prod.yaml"
+
+  uninstall:
+    desc: Uninstall Craftista Helm release
+    cmds:
+      - |
+        echo "Uninstalling release {{.RELEASE_NAME}} from namespace {{.NAMESPACE}}..."
+        helm uninstall {{.RELEASE_NAME}} --namespace {{.NAMESPACE}}
+
+  status:
+    desc: Show status of Helm release
+    cmds:
+      - helm status {{.RELEASE_NAME}} --namespace {{.NAMESPACE}}
+
+  list:
+    desc: List all Helm releases
+    cmds:
+      - helm list --all-namespaces
+
+  template:
+    desc: Render Helm templates locally
+    vars:
+      VALUES_FILE: '{{.VALUES_FILE | default ""}}'
+    cmds:
+      - |
+        {{- if .VALUES_FILE }}
+        helm template {{.RELEASE_NAME}} {{.CHART_PATH}} \
+          --namespace {{.NAMESPACE}} \
+          -f {{.VALUES_FILE}}
+        {{- else }}
+        helm template {{.RELEASE_NAME}} {{.CHART_PATH}} \
+          --namespace {{.NAMESPACE}}
+        {{- end }}
+
+  lint:
+    desc: Lint Helm chart
+    cmds:
+      - echo "Linting Helm chart..."
+      - helm lint {{.CHART_PATH}}
+      - echo "Linting with dev values..."
+      - helm lint {{.CHART_PATH}} -f {{.CHART_PATH}}/values-dev.yaml
+      - echo "Linting with test values..."
+      - helm lint {{.CHART_PATH}} -f {{.CHART_PATH}}/values-test.yaml
+      - echo "Linting with prod values..."
+      - helm lint {{.CHART_PATH}} -f {{.CHART_PATH}}/values-prod.yaml
+
+  package:
+    desc: Package Helm chart
+    cmds:
+      - |
+        echo "Packaging Helm chart..."
+        helm package {{.CHART_PATH}}
+        echo "Chart packaged successfully!"
+
+  test:
+    desc: Run Helm tests
+    cmds:
+      - helm test {{.RELEASE_NAME}} --namespace {{.NAMESPACE}}
+
+  rollback:
+    desc: Rollback to previous release
+    vars:
+      REVISION: '{{.REVISION | default "0"}}'
+    cmds:
+      - |
+        echo "Rolling back {{.RELEASE_NAME}} in namespace {{.NAMESPACE}}..."
+        helm rollback {{.RELEASE_NAME}} {{.REVISION}} --namespace {{.NAMESPACE}}
+
+  history:
+    desc: Show release history
+    cmds:
+      - helm history {{.RELEASE_NAME}} --namespace {{.NAMESPACE}}
+
+  values:
+    desc: Show values for a release
+    cmds:
+      - helm get values {{.RELEASE_NAME}} --namespace {{.NAMESPACE}}
+
+  diff:
+    desc: Show diff between current and proposed changes (requires helm-diff plugin)
+    vars:
+      VALUES_FILE: '{{.VALUES_FILE | default ""}}'
+    cmds:
+      - |
+        echo "Showing diff for {{.RELEASE_NAME}}..."
+        {{- if .VALUES_FILE }}
+        helm diff upgrade {{.RELEASE_NAME}} {{.CHART_PATH}} \
+          --namespace {{.NAMESPACE}} \
+          -f {{.VALUES_FILE}}
+        {{- else }}
+        helm diff upgrade {{.RELEASE_NAME}} {{.CHART_PATH}} \
+          --namespace {{.NAMESPACE}}
+        {{- end }}
+
+  dry-run:
+    desc: Perform a dry-run installation
+    vars:
+      VALUES_FILE: '{{.VALUES_FILE | default ""}}'
+    cmds:
+      - |
+        echo "Performing dry-run installation..."
+        {{- if .VALUES_FILE }}
+        helm install {{.RELEASE_NAME}} {{.CHART_PATH}} \
+          --namespace {{.NAMESPACE}} \
+          --create-namespace \
+          --dry-run \
+          --debug \
+          -f {{.VALUES_FILE}}
+        {{- else }}
+        helm install {{.RELEASE_NAME}} {{.CHART_PATH}} \
+          --namespace {{.NAMESPACE}} \
+          --create-namespace \
+          --dry-run \
+          --debug
+        {{- end }}
+
+  dependencies:
+    desc: Update chart dependencies
+    cmds:
+      - helm dependency update {{.CHART_PATH}}
+
+  port-forward:
+    desc: Port forward all services for local development
+    vars:
+      RELEASE_NAME: '{{.RELEASE_NAME | default "craftista-dev"}}'
+      NAMESPACE: '{{.NAMESPACE | default "craftista-dev"}}'
+    cmds:
+      - |
+        echo "Starting port forwards for all services..."
+        echo "This will make services available at:"
+        echo "  Frontend:        http://localhost:3030"
+        echo "  Catalogue API:   http://localhost:5000"
+        echo "  Voting API:      http://localhost:8080"
+        echo "  Recommendation:  http://localhost:8081"
+        echo ""
+        echo "Starting port-forwards in parallel..."
+        kubectl port-forward -n {{.NAMESPACE}} svc/{{.RELEASE_NAME}}-frontend 3030:3030 &
+        kubectl port-forward -n {{.NAMESPACE}} svc/{{.RELEASE_NAME}}-catalogue 5000:5000 &
+        kubectl port-forward -n {{.NAMESPACE}} svc/{{.RELEASE_NAME}}-voting 8080:8080 &
+        kubectl port-forward -n {{.NAMESPACE}} svc/{{.RELEASE_NAME}}-recommendation 8081:8080 &
+        echo ""
+        echo "Port forwards started. Press Ctrl+C to stop all."
+        wait
+
+  help:
+    desc: Show Helm tasks help and usage examples
+    cmds:
+      - |
+        echo "⚓ Helm Tasks - Kubernetes Deployment"
+        echo "===================================="
+        echo ""
+        echo "📋 COMMON TASKS"
+        echo "---------------"
+        echo "  task helm:install         # Install with default values"
+        echo "  task helm:install:dev     # Install with dev values"
+        echo "  task helm:install:test    # Install with test values"
+        echo "  task helm:install:prod    # Install with prod values"
+        echo "  task helm:upgrade         # Upgrade existing release"
+        echo "  task helm:uninstall       # Uninstall release"
+        echo "  task helm:status          # Show release status"
+        echo "  task helm:list            # List all releases"
+        echo ""
+        echo "🔍 DEBUGGING TASKS"
+        echo "------------------"
+        echo "  task helm:template        # Render templates locally"
+        echo "  task helm:lint            # Lint chart for errors"
+        echo "  task helm:dry-run         # Simulate installation"
+        echo "  task helm:diff            # Show upgrade diff (requires plugin)"
+        echo "  task helm:values          # Show current values"
+        echo ""
+        echo "📦 MANAGEMENT TASKS"
+        echo "-------------------"
+        echo "  task helm:package         # Package chart"
+        echo "  task helm:rollback        # Rollback to previous version"
+        echo "  task helm:history         # Show release history"
+        echo "  task helm:test            # Run Helm tests"
+        echo "  task helm:dependencies    # Update dependencies"
+        echo "  task helm:port-forward    # Port forward all services"
+        echo ""
+        echo "💡 EXAMPLES"
+        echo "-----------"
+        echo "  # Install in custom namespace with custom values"
+        echo "  task helm:install RELEASE_NAME=my-app NAMESPACE=testing VALUES_FILE=./my-values.yaml"
+        echo ""
+        echo "  # Upgrade production with specific values"
+        echo "  task helm:upgrade NAMESPACE=prod VALUES_FILE=./helm/craftista/values-prod.yaml"
+        echo ""
+        echo "  # Check what would be installed"
+        echo "  task helm:dry-run VALUES_FILE=./helm/craftista/values-dev.yaml"
+        echo ""
+        echo "  # Rollback to specific revision"
+        echo "  task helm:rollback REVISION=3 NAMESPACE=prod"
+        echo ""
+        echo "  # Compare current with proposed changes"
+        echo "  task helm:diff VALUES_FILE=./new-values.yaml"
+        echo ""
+        echo "  # Template and apply with kubectl"
+        echo "  task helm:template | kubectl apply -f -"
+        echo ""
+        echo "📝 NOTES"
+        echo "--------"
+        echo "- Default namespace: 'default'"
+        echo "- Default release name: 'craftista'"
+        echo "- Chart location: ./craftista"
+        echo "- Values files: values.yaml, values-dev.yaml, values-test.yaml, values-prod.yaml"
+        echo ""
+        echo "For helm-diff plugin:"
+        echo "  helm plugin install https://github.com/databus23/helm-diff"

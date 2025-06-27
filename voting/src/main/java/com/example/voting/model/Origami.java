@@ -11,7 +11,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @Entity
 public class Origami {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long origamiId;
     private String name;
     private int votes;

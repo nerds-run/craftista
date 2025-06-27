@@ -13,6 +13,9 @@ includes:
   recommendation:
     taskfile: ./recommendation/Taskfile.yaml
     dir: ./recommendation
+  helm:
+    taskfile: ./helm/Taskfile.yaml
+    dir: ./helm
 
 vars:
   SERVICES: frontend catalogue voting recommendation
@@ -335,9 +338,129 @@ tasks:
         echo "  task voting:dev"
         echo "  task recommendation:dev"
 
-  help:
-    desc: Show comprehensive help for all available tasks
+  check:standards:
+    desc: Check codebase for common standardization issues
     cmds:
+      - |
+        echo "🔍 Craftista Standards Checker"
+        echo "=============================="
+        echo ""
+        ISSUES_FOUND=0
+        
+        # Check for catalog vs catalogue consistency
+        echo "Checking for catalog/catalogue consistency..."
+        CATALOG_COUNT=$(grep -r "catalog[^u]" --include="*.js" --include="*.py" --include="*.java" --include="*.go" --include="*.json" --include="*.yaml" --include="*.yml" --include="*.md" . 2>/dev/null | grep -v "node_modules" | grep -v ".git" | wc -l || true)
+        if [ $CATALOG_COUNT -gt 0 ]; then
+            echo "✗ Found $CATALOG_COUNT instances of 'catalog' (should be 'catalogue')"
+            ISSUES_FOUND=$((ISSUES_FOUND + 1))
+        else
+            echo "✓ Naming is consistent (using 'catalogue')"
+        fi
+        
+        # Check for health endpoints
+        echo ""
+        echo "Checking for health endpoints..."
+        for service in frontend catalogue voting recommendation; do
+            if grep -q "health\|/health" $service/*.* 2>/dev/null; then
+                echo "✓ $service has health endpoint"
+            else
+                echo "⚠ $service appears to be missing health endpoint"
+                ISSUES_FOUND=$((ISSUES_FOUND + 1))
+            fi
+        done
+        
+        # Check for non-root users in Dockerfiles
+        echo ""
+        echo "Checking Docker security (non-root users)..."
+        for dockerfile in */Dockerfile; do
+            if [ -f "$dockerfile" ]; then
+                SERVICE=$(dirname $dockerfile)
+                if grep -q "USER" $dockerfile; then
+                    echo "✓ $SERVICE uses non-root user"
+                else
+                    echo "✗ $SERVICE runs as root user"
+                    ISSUES_FOUND=$((ISSUES_FOUND + 1))
+                fi
+            fi
+        done
+        
+        # Check for TODO comments
+        echo ""
+        echo "Checking for TODO comments..."
+        TODO_COUNT=$(grep -r "TODO" --include="*.js" --include="*.py" --include="*.java" --include="*.go" --include="Dockerfile" . 2>/dev/null | grep -v "node_modules" | grep -v ".git" | wc -l || true)
+        if [ $TODO_COUNT -gt 0 ]; then
+            echo "⚠ Found $TODO_COUNT TODO comments in code"
+            ISSUES_FOUND=$((ISSUES_FOUND + 1))
+        else
+            echo "✓ No TODO comments found"
+        fi
+        
+        # Check for outdated dependencies
+        echo ""
+        echo "Checking for known vulnerable dependencies..."
+        if [ -f "frontend/package.json" ]; then
+            if grep -q '"axios": "0.21.1"' frontend/package.json; then
+                echo "✗ Frontend has vulnerable axios@0.21.1"
+                ISSUES_FOUND=$((ISSUES_FOUND + 1))
+            else
+                echo "✓ No known vulnerable dependencies found"
+            fi
+        fi
+        
+        # Summary
+        echo ""
+        echo "=============================="
+        if [ $ISSUES_FOUND -eq 0 ]; then
+            echo "✅ All checks passed!"
+        else
+            echo "❌ Found $ISSUES_FOUND issues that need attention"
+            echo ""
+            echo "See STANDARDS.md for coding standards and conventions"
+        fi
+
+  check:versions:
+    desc: Check version consistency across all services
+    cmds:
+      - |
+        echo "📦 Version Check"
+        echo "================"
+        echo ""
+        echo "Service versions from config files:"
+        
+        # Frontend
+        if [ -f "frontend/config.json" ]; then
+            VERSION=$(grep -o '"version":[[:space:]]*"[^"]*"' frontend/config.json | cut -d'"' -f4)
+            echo "Frontend:        $VERSION"
+        fi
+        
+        # Catalogue  
+        if [ -f "catalogue/config.json" ]; then
+            VERSION=$(grep -o '"version":[[:space:]]*"[^"]*"' catalogue/config.json | cut -d'"' -f4)
+            echo "Catalogue:       $VERSION"
+        fi
+        
+        # Voting
+        if [ -f "voting/pom.xml" ]; then
+            VERSION=$(grep -o '<version>[^<]*</version>' voting/pom.xml | head -1 | sed 's/<[^>]*>//g')
+            echo "Voting:          $VERSION (from pom.xml)"
+        fi
+        
+        # Recommendation
+        if [ -f "recommendation/config.json" ]; then
+            VERSION=$(grep -o '"version":[[:space:]]*"[^"]*"' recommendation/config.json | cut -d'"' -f4)
+            echo "Recommendation:  $VERSION"
+        fi
+        
+        # Helm Chart
+        if [ -f "helm/craftista/Chart.yaml" ]; then
+            CHART_VERSION=$(grep '^version:' helm/craftista/Chart.yaml | awk '{print $2}')
+            APP_VERSION=$(grep '^appVersion:' helm/craftista/Chart.yaml | awk '{print $2}' | tr -d '"')
+            echo ""
+            echo "Helm Chart:      $CHART_VERSION"
+            echo "Helm appVersion: $APP_VERSION"
+        fi
+
+  help:
       - |
         echo "🚀 Craftista Task Runner Help"
         echo "============================="
@@ -376,6 +499,15 @@ tasks:
         echo "  task docker:compose:down  # Stop services"
         echo "  task docker:compose:logs  # View service logs"
         echo ""
+        echo "⚓ HELM/KUBERNETES"
+        echo "-----------------"
+        echo "  task helm:help            # Show Helm tasks help"
+        echo "  task helm:install:dev     # Install in dev mode"
+        echo "  task helm:install:prod    # Install in prod mode"
+        echo "  task helm:upgrade         # Upgrade release"
+        echo "  task helm:status          # Show release status"
+        echo "  task helm:lint            # Lint Helm chart"
+        echo ""
         echo "🎭 CI/CD TESTING (Act)"
         echo "--------------------"
         echo "  task act:help             # Show act tasks help"
@@ -386,6 +518,8 @@ tasks:
         echo "------------"
         echo "  task lint                 # Run linters for all services"
         echo "  task clean                # Clean all build artifacts"
+        echo "  task check:standards      # Check for standardization issues"
+        echo "  task check:versions       # Check version consistency"
         echo "  task --list               # Show all available tasks"
         echo "  task --list-all           # Show tasks from all Taskfiles"
         echo ""

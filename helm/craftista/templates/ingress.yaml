@@ -1,0 +1,69 @@
+{{- if .Values.ingress.enabled -}}
+apiVersion: {{ include "craftista.ingress.apiVersion" . }}
+kind: Ingress
+metadata:
+  name: {{ include "craftista.fullname" . }}
+  labels:
+    {{- include "craftista.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- range .Values.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          # Frontend
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "craftista.serviceName" (dict "service" "frontend" "context" $) }}
+                port:
+                  number: {{ $.Values.frontend.service.port }}
+          # API routes
+          - path: /api/products
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "craftista.serviceName" (dict "service" "catalogue" "context" $) }}
+                port:
+                  number: {{ $.Values.catalogue.service.port }}
+          - path: /api/origamis
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "craftista.serviceName" (dict "service" "voting" "context" $) }}
+                port:
+                  number: {{ $.Values.voting.service.port }}
+          - path: /api/origami-of-the-day
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "craftista.serviceName" (dict "service" "recommendation" "context" $) }}
+                port:
+                  number: {{ $.Values.recommendation.service.port }}
+          - path: /api/recommendation-status
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "craftista.serviceName" (dict "service" "recommendation" "context" $) }}
+                port:
+                  number: {{ $.Values.recommendation.service.port }}
+    {{- end }}
+{{- end }}

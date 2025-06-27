@@ -1,0 +1,94 @@
+# Development environment overrides
+
+global:
+  imageRegistry: ghcr.io/nerds-run/craftista
+
+frontend:
+  replicaCount: 1
+  image:
+    tag: main
+    pullPolicy: Always
+  service:
+    type: NodePort
+    nodePort: 30030
+  ingress:
+    enabled: false
+  resources:
+    limits:
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+
+catalogue:
+  replicaCount: 1
+  image:
+    tag: main
+    pullPolicy: Always
+  resources:
+    limits:
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+
+voting:
+  replicaCount: 1
+  image:
+    tag: main
+    pullPolicy: Always
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  autoscaling:
+    enabled: false
+
+recommendation:
+  replicaCount: 1
+  image:
+    tag: main
+    pullPolicy: Always
+  resources:
+    limits:
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  autoscaling:
+    enabled: false
+
+# PostgreSQL for dev
+postgresql:
+  enabled: true
+  primary:
+    persistence:
+      enabled: false  # No persistent storage
+    resources:
+      limits:
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 128Mi
+
+# Monitoring disabled for dev
+serviceMonitor:
+  enabled: false
+
+# Pod disruption budgets disabled for dev
+podDisruptionBudget:
+  enabled: false
+
+# Network policies disabled for dev
+networkPolicy:
+  enabled: false
+
+# ServiceAccount enabled for dev
+serviceAccount:
+  create: true

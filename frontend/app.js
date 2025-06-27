@@ -123,6 +123,16 @@ app.get("/daily-origami", (req, res) => {
     });
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    service: 'frontend',
+    version: config.version || '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Handle 404
 app.use((req, res, next) => {
   res.status(404).send("ERROR 404 - Not Found on This Server");

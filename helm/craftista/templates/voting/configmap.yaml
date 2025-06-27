@@ -1,0 +1,21 @@
+{{- if .Values.voting.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "craftista.serviceName" (dict "service" "voting" "context" $) }}
+  labels:
+    {{- include "craftista.serviceLabels" (dict "service" "voting" "context" $) | nindent 4 }}
+data:
+  SERVER_PORT: "8080"
+  SPRING_PROFILES_ACTIVE: "production"
+  {{- if .Values.postgresql.enabled }}
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://{{ include "craftista.fullname" . }}-postgresql:5432/voting"
+  SPRING_DATASOURCE_USERNAME: "devops"
+  SPRING_DATASOURCE_PASSWORD: "devops"
+  SPRING_DATASOURCE_DRIVER_CLASS_NAME: "org.postgresql.Driver"
+  SPRING_JPA_DATABASE_PLATFORM: "org.hibernate.dialect.PostgreSQLDialect"
+  SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
+  {{- end }}
+  # Catalogue service configuration
+  CATALOGUE_SERVICE_URL: "http://{{ include "craftista.fullname" . }}-catalogue:{{ .Values.catalogue.service.port }}/api/products"
+{{- end }}

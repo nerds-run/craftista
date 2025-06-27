@@ -11,6 +11,14 @@ COPY . .
 # Build the Go application
 RUN go build -o app
 
+# Create non-root user
+RUN addgroup -g 1001 appgroup && \
+    adduser -D -u 1001 -G appgroup appuser && \
+    chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
+
 # Expose port 8080 for the application
 EXPOSE 8080
 

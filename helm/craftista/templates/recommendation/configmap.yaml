@@ -1,0 +1,11 @@
+{{- if .Values.recommendation.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "craftista.serviceName" (dict "service" "recommendation" "context" $) }}
+  labels:
+    {{- include "craftista.serviceLabels" (dict "service" "recommendation" "context" $) | nindent 4 }}
+data:
+  PORT: "8080"
+  GIN_MODE: "release"
+{{- end }}

@@ -1,0 +1,14 @@
+{{- if .Values.postgresql.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "craftista.fullname" . }}-postgresql-init
+  labels:
+    {{- include "craftista.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+data:
+  {{- range $key, $value := .Values.postgresql.primary.initdb.scripts }}
+  {{ $key }}: |
+{{ $value | indent 4 }}
+  {{- end }}
+{{- end }}

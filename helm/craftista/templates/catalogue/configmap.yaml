@@ -1,0 +1,19 @@
+{{- if .Values.catalogue.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "craftista.serviceName" (dict "service" "catalogue" "context" $) }}
+  labels:
+    {{- include "craftista.serviceLabels" (dict "service" "catalogue" "context" $) | nindent 4 }}
+data:
+  PORT: "5000"
+  FLASK_ENV: "production"
+  {{- if .Values.postgresql.enabled }}
+  DATABASE_URL: "postgresql://devops:devops@{{ include "craftista.fullname" . }}-postgresql:5432/catalogue"
+  DB_HOST: "{{ include "craftista.fullname" . }}-postgresql"
+  DB_PORT: "5432"
+  DB_NAME: "catalogue"
+  DB_USER: "devops"
+  DB_PASSWORD: "devops"
+  {{- end }}
+{{- end }}

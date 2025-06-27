@@ -1,0 +1,234 @@
+# Default values for craftista
+# This is a YAML-formatted file
+# Declare variables to be passed into your templates
+
+global:
+  imageRegistry: ghcr.io/nerds-run/craftista
+  imagePullSecrets: []
+  storageClass: ""
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# Frontend Service Configuration
+frontend:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: craftista-frontend
+    tag: main
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 3030
+    nodePort: 30030  # Used only if type is NodePort
+    
+  ingress:
+    enabled: false
+    className: nginx
+    annotations: {}
+    hosts:
+      - host: craftista.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+  
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  
+  config:
+    version: "1.0.0"
+  
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+# Catalogue Service Configuration  
+catalogue:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: craftista-catalogue
+    tag: main
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 5000
+    
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  
+  config:
+    enabled: true  # Configuration will be provided via ConfigMap
+  
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+
+# Voting Service Configuration
+voting:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: craftista-voting
+    tag: main
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 8080
+    
+  resources:
+    limits:
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+  
+  config:
+    enabled: true  # Configuration will be provided via ConfigMap
+  
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+
+# Recommendation Service Configuration
+recommendation:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: craftista-recommendation
+    tag: main
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 8080
+    
+  resources:
+    limits:
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  
+  config:
+    enabled: true  # Configuration will be provided via ConfigMap
+  
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+
+# PostgreSQL for Catalogue and Voting services
+postgresql:
+  enabled: true
+  
+  # PostgreSQL configuration
+  image:
+    registry: docker.io
+    repository: postgres
+    tag: 16.2-alpine3.19
+    
+  auth:
+    postgresPassword: postgres
+    enablePostgresUser: true
+    
+  # Databases and users will be created via init scripts
+  primary:
+    initdb:
+      scripts:
+        01-init-databases.sql: |
+          -- Create devops user (shared by both databases)
+          CREATE USER devops WITH ENCRYPTED PASSWORD 'devops';
+          
+          -- Create catalogue database
+          CREATE DATABASE catalogue;
+          GRANT ALL PRIVILEGES ON DATABASE catalogue TO devops;
+          \c catalogue;
+          GRANT CREATE ON SCHEMA public TO devops;
+          GRANT ALL ON ALL TABLES IN SCHEMA public TO devops;
+          GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO devops;
+          
+          -- Create voting database  
+          CREATE DATABASE voting;
+          GRANT ALL PRIVILEGES ON DATABASE voting TO devops;
+          \c voting;
+          GRANT CREATE ON SCHEMA public TO devops;
+          GRANT ALL ON ALL TABLES IN SCHEMA public TO devops;
+          GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO devops;
+    
+    persistence:
+      enabled: true
+      size: 8Gi
+      storageClass: ""
+    
+    resources:
+      limits:
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+        
+  service:
+    type: ClusterIP
+    port: 5432
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: craftista.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Service Monitor for Prometheus
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  scrapeTimeout: 10s
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+# Network Policies
+networkPolicy:
+  enabled: false
+  policyTypes:
+    - Ingress
+    - Egress
+
+# ServiceAccount
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""

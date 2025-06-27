@@ -116,6 +116,17 @@ func main() {
         
 	// Service Status Page
         router.GET("/api/recommendation-status", getRecommendationStatus)
+        
+        // Health check endpoint
+        router.GET("/health", func(c *gin.Context) {
+            config, _ := loadConfig()
+            c.JSON(http.StatusOK, gin.H{
+                "status": "healthy",
+                "service": "recommendation",
+                "version": config.Version,
+                "timestamp": time.Now().Format(time.RFC3339),
+            })
+        })
 
 
 	// Start the server on port 8080

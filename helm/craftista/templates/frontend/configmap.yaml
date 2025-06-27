@@ -1,0 +1,25 @@
+{{- if .Values.frontend.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "craftista.serviceName" (dict "service" "frontend" "context" $) }}
+  labels:
+    {{- include "craftista.serviceLabels" (dict "service" "frontend" "context" $) | nindent 4 }}
+data:
+  PORT: "3030"
+  NODE_ENV: "production"
+  version: {{ .Values.frontend.config.version | default .Chart.AppVersion | quote }}
+  {{- if and .Values.frontend.config .Values.frontend.config.productsApiBaseUri }}
+  # Using config values from values file
+  {{- range $key, $value := .Values.frontend.config }}
+  {{- if ne $key "version" }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- end }}
+  {{- else }}
+  # Default service discovery URLs - using Kubernetes service names
+  productsApiBaseUri: "http://{{ .Release.Name }}-catalogue:{{ .Values.catalogue.service.port }}"
+  recommendationBaseUri: "http://{{ .Release.Name }}-recommendation:{{ .Values.recommendation.service.port }}"
+  votingBaseUri: "http://{{ .Release.Name }}-voting:{{ .Values.voting.service.port }}"
+  {{- end }}
+{{- end }}

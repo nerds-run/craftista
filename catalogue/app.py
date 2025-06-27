@@ -14,17 +14,17 @@ with open("config.json", "r") as config_file:
     config_data = json.load(config_file) 
 
 def get_db_connection():
-    conn = psycopg2.connect(host=config_data.get("db_host"),
-                            database=config_data.get("db_name"),
-                            user=config_data.get("db_user"),
-                            password=config_data.get("db_password")
+    conn = psycopg2.connect(host=config_data.get("dbHost"),
+                            database=config_data.get("dbName"),
+                            user=config_data.get("dbUser"),
+                            password=config_data.get("dbPassword")
                            )
     return conn
 
 @app.route('/')
 def home():
     system_info = get_system_info()
-    app_version = config_data.get("app_version", "N/A")  # Default to "N/A" if no version is found
+    app_version = config_data.get("version", "N/A")  # Default to "N/A" if no version is found
     return render_template('index.html', current_year=datetime.now().year, system_info=system_info, version=app_version)
 
 @app.route('/api/products', methods=['GET'])
@@ -66,6 +66,16 @@ def get_system_info():
         "is_kubernetes": is_kubernetes
     }
 
+
+@app.route('/health', methods=['GET'])
+def health():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'service': 'catalogue',
+        'version': config_data.get('version', '1.0.0'),
+        'timestamp': datetime.utcnow().isoformat() + 'Z'
+    })
 
 if __name__ == "__main__":
     app.run(debug=True)

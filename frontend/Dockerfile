@@ -1,5 +1,5 @@
 # Use the official Node.js image based on Alpine Linux
-FROM node:latest as build
+FROM node:20.11.1-alpine3.19 as build
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -21,7 +21,7 @@ COPY . .
 # ----------------------------------------------
 
 # Use a smaller base image (Alpine Linux)
-FROM node:alpine
+FROM node:20.11.1-alpine3.19
 
 # Set a non-root user for better security
 RUN adduser -D appuser
