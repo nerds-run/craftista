@@ -5,6 +5,8 @@
 ### Things that need to be completed
 
 **should be fixed**
+--testing argocd--
+
 Need to remove the github personal access token requirement. The main thing that needs to be changed is the OCI images need to
 be public and accessible to everyone. As time permits I will get this done.
 
